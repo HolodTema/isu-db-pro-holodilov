@@ -3,11 +3,20 @@ create table if not exists equipment_types(
 	name text not null
 );
 
+comment on table  equipment_types      is 'Справочник типов метеорологического оборудования';
+comment on column equipment_types.id   is 'Уникальный идентификатор типа оборудования';
+comment on column equipment_types.name is 'Название типа оборудования (ВР или ДМК)';
+
 create table if not exists job_positions(
 	id int primary key,
 	name text not null,
 	description text
 );
+
+comment on table  job_positions             is 'Справочник должностей военнослужащих метеопоста';
+comment on column job_positions.id          is 'Уникальный идентификатор должности';
+comment on column job_positions.name        is 'Название должности';
+comment on column job_positions.description is 'Описание обязанностей на должности';
 
 create table if not exists users(
 	id int primary key,
@@ -15,6 +24,12 @@ create table if not exists users(
 	last_name text not null,
 	job_position_id int not null
 );
+
+comment on table  users                 is 'Пользователи ПАК (личный состав метеопоста)';
+comment on column users.id              is 'Уникальный идентификатор пользователя';
+comment on column users.first_name      is 'Имя пользователя';
+comment on column users.last_name       is 'Фамилия пользователя';
+comment on column users.job_position_id is 'Ссылка на должность пользователя (job_positions.id)';
 
 create table if not exists measurement_params(
 	id int primary key,
@@ -28,6 +43,17 @@ create table if not exists measurement_params(
 	user_id int not null
 );
 
+comment on table  measurement_params                   is 'Исходные данные наземного замера на метеопосту';
+comment on column measurement_params.id                is 'Уникальный идентификатор замера';
+comment on column measurement_params.altitude          is 'Высота метеопоста над уровнем моря';
+comment on column measurement_params.temperature       is 'Измеренная приземная температура воздуха';
+comment on column measurement_params.pressure          is 'Измеренное атмосферное давление';
+comment on column measurement_params.wind_direction    is 'Направление приземного ветра';
+comment on column measurement_params.wind_speed        is 'Скорость приземного ветра, заполняется только для ДМК';
+comment on column measurement_params.bullet_variance   is 'Дальность сноса ветровых пуль, заполняется только для ВР';
+comment on column measurement_params.equipment_type_id is 'Ссылка на тип оборудования (equipment_types.id)';
+comment on column measurement_params.user_id           is 'Ссылка на пользователя, выполнившего замер (users.id)';
+
 create table if not exists measurement_bundles(
     id int primary key,
     created_at timestamp not null,
@@ -36,6 +62,14 @@ create table if not exists measurement_bundles(
     temperature_variance int not null,
 	measurement_param_id int not null
 );
+
+comment on table  measurement_bundles                        is 'Пачки метеобюллетеня Метео-11 приближённый';
+comment on column measurement_bundles.id                     is 'Уникальный идентификатор пачки';
+comment on column measurement_bundles.created_at             is 'Дата и время окончания зондирования (ДДЧЧМ)';
+comment on column measurement_bundles.altitude               is 'Высота метеопоста над уровнем моря (ВВВВ)';
+comment on column measurement_bundles.pressure_variance      is 'Отклонение наземного давления';
+comment on column measurement_bundles.temperature_variance   is 'Отклонение приземной виртуальной температуры';
+comment on column measurement_bundles.measurement_param_id   is 'Ссылка на исходный замер (measurement_params.id)';
 
 insert into equipment_types(id, name) values
     (1, 'Ветровое ружье'),
@@ -66,8 +100,7 @@ insert into measurement_bundles(id, created_at, altitude, pressure_variance, tem
     (3, timestamp '2025-01-01 06:30:00', 600,  -7, -19, 3)
 on conflict (id) do nothing;
 
-select * from measurement_bundle_layers
-join measurement_bundles on measurement_bundles.id = measurement_bundle_layers.measurement_bundle_id
+select * from measurement_bundles
 join measurement_params on measurement_params.id = measurement_bundles.measurement_param_id
 join equipment_types on equipment_types.id = measurement_params.equipment_type_id
 join users on users.id = measurement_params.user_id
