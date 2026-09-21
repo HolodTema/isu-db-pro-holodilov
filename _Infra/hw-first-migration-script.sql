@@ -37,17 +37,6 @@ create table if not exists measurement_bundles(
 	measurement_param_id int not null
 );
 
-create table if not exists measurement_bundle_layers(
-    id int primary key,
-    altitude int not null,
-    temperature_variance int not null,
-    wind_direction int not null,
-    wind_speed int not null,
-    measurement_bundle_id int not null,
-
-    constraint check_altitude check (altitude in (2, 4, 8, 12, 16, 20, 24, 30, 40))
-);
-
 insert into equipment_types(id, name) values
     (1, 'Ветровое ружье'),
     (2, 'Десантный метеокомплект')
@@ -75,45 +64,6 @@ insert into measurement_bundles(id, created_at, altitude, pressure_variance, tem
     (1, timestamp '2026-03-23 06:10:00', 100,   0,   0, 1),
     (2, timestamp '2026-09-17 06:20:00', 200,  15,  11, 2),
     (3, timestamp '2025-01-01 06:30:00', 600,  -7, -19, 3)
-on conflict (id) do nothing;
-
-insert into measurement_bundle_layers
-    (id, altitude, temperature_variance, wind_direction, wind_speed, measurement_bundle_id) values
-    ( 1, 2, -12, 5, 2, 1),
-    ( 2, 4, -14, 7, 3, 1),
-    ( 3, 8, -16, 10, 4, 1),
-    ( 4, 12, -18, 12, 5, 1),
-    ( 5, 16, -20, 15, 6, 1),
-    ( 6, 20, -22, 18, 7, 1),
-    ( 7, 24, -24, 20, 8, 1),
-    ( 8, 30, -27, 25, 10, 1),
-    ( 9, 40, -30, 30, 12, 1)
-on conflict (id) do nothing;
-
-insert into measurement_bundle_layers
-    (id, altitude, temperature_variance, wind_direction, wind_speed, measurement_bundle_id) values
-    (10, 2, 5, 18, 6, 2),
-    (11, 4, 6, 19, 7, 2),
-    (12, 8, 8, 20, 8, 2),
-    (13, 12, 9, 21, 9, 2),
-    (14, 16, 10, 22, 10, 2),
-    (15, 20, 11, 23, 11, 2),
-    (16, 24, 12, 24, 12, 2),
-    (17, 30, 13, 25, 13, 2),
-    (18, 40, 14, 26, 14, 2)
-on conflict (id) do nothing;
-
-insert into measurement_bundle_layers
-    (id, altitude, temperature_variance, wind_direction, wind_speed, measurement_bundle_id) values
-    (19, 2, -14, 42, 3, 3),
-    (20, 4, -15, 43, 4, 3),
-    (21, 8, -17, 44, 5, 3),
-    (22, 12, -18, 45, 6, 3),
-    (23, 16, -20, 46, 7, 3),
-    (24, 20, -22, 47, 8, 3),
-    (25, 24, -24, 48, 9, 3),
-    (26, 30, -27, 50, 11, 3),
-    (27, 40, -30, 52, 13, 3)
 on conflict (id) do nothing;
 
 select * from measurement_bundle_layers
