@@ -100,14 +100,6 @@ insert into measurement_params(id, altitude, temperature, pressure, wind_directi
     (3, 600, -3.0, 743, 40, null, 30, 3)
 on conflict (id) do nothing;
 
-insert into measurement_units(id, name) values
-    (1, 'метр'),
-    (2, 'мм ртутного столба'),
-    (3, 'метр в секунду'),
-    (4, 'градус цельсия'),
-    (5, 'градус')
-on conflict (id) do nothing;
-
 select *
 from measurement_bundles mb
 join measurement_params mp
