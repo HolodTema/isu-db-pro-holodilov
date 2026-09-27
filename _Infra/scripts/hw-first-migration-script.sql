@@ -39,8 +39,7 @@ create table if not exists measurement_params(
 	wind_direction int not null check(wind_direction >= 0 and wind_direction <= 59),
 	wind_speed int check(wind_speed >= 0 and wind_speed <= 15),
 	bullet_variance int check(bullet_variance >= 0 and bullet_variance <= 150),
-	equipment_type_id int not null,
-	user_id int not null
+    measurement_bundle_id int not null
 );
 
 comment on table  measurement_params                   is 'Исходные данные наземного замера на метеопосту';
@@ -51,8 +50,7 @@ comment on column measurement_params.pressure          is 'Измеренное 
 comment on column measurement_params.wind_direction    is 'Направление приземного ветра';
 comment on column measurement_params.wind_speed        is 'Скорость приземного ветра, заполняется только для ДМК';
 comment on column measurement_params.bullet_variance   is 'Дальность сноса ветровых пуль, заполняется только для ВР';
-comment on column measurement_params.equipment_type_id is 'Ссылка на тип оборудования (equipment_types.id)';
-comment on column measurement_params.user_id           is 'Ссылка на пользователя, выполнившего замер (users.id)';
+comment on column measurement_params.measurement_bundle_id   is 'Ссылка на исходную пачку (measurement_bundles.id)';
 
 create table if not exists measurement_bundles(
     id int primary key,
@@ -60,7 +58,8 @@ create table if not exists measurement_bundles(
     altitude int not null,
     pressure_variance int not null,
     temperature_variance int not null,
-	measurement_param_id int not null
+    user_id int not null,
+    equipment_type_id int not null
 );
 
 comment on table  measurement_bundles                        is 'Пачки метеобюллетеня Метео-11 приближённый';
@@ -69,8 +68,9 @@ comment on column measurement_bundles.created_at             is 'Дата и в�
 comment on column measurement_bundles.altitude               is 'Высота метеопоста над уровнем моря (ВВВВ)';
 comment on column measurement_bundles.pressure_variance      is 'Отклонение наземного давления';
 comment on column measurement_bundles.temperature_variance   is 'Отклонение приземной виртуальной температуры';
-comment on column measurement_bundles.measurement_param_id   is 'Ссылка на исходный замер (measurement_params.id)';
-
+comment on column measurement_bundles.equipment_type_id      is 'Ссылка на тип оборудования (equipment_types.id)';
+comment on column measurement_bundles.user_id                is 'Ссылка на пользователя, выполнившего замер (users.id)';
+  
 insert into equipment_types(id, name) values
     (1, 'Ветровое ружье'),
     (2, 'Десантный метеокомплект')
@@ -88,21 +88,34 @@ insert into users(id, first_name, last_name, job_position_id) values
 	(4, 'Василий', 'Пупкин', 2)
 on conflict (id) do nothing;
 
-insert into measurement_params(id, altitude, temperature, pressure, wind_direction, wind_speed, bullet_variance, equipment_type_id, user_id) values
-    (1, 100, 15.0, 750, 0, 0, null, 2, 4),
-    (2, 200, 25.0, 765, 15, 6, null, 2, 2),
-    (3, 600, -3.0, 743, 40, null, 30, 1, 3)
+insert into measurement_bundles(id, created_at, altitude, pressure_variance, temperature_variance, user_id, equipment_type_id) values
+    (1, timestamp '2026-03-23 06:10:00', 100,   0,   3, 1, 2),
+    (2, timestamp '2026-09-17 06:20:00', 200,  15,  1, 2, 2),
+    (3, timestamp '2025-01-01 06:30:00', 600,  -7, 2, 3, 1)
 on conflict (id) do nothing;
 
-insert into measurement_bundles(id, created_at, altitude, pressure_variance, temperature_variance, measurement_param_id) values
-    (1, timestamp '2026-03-23 06:10:00', 100,   0,   0, 1),
-    (2, timestamp '2026-09-17 06:20:00', 200,  15,  11, 2),
-    (3, timestamp '2025-01-01 06:30:00', 600,  -7, -19, 3)
+insert into measurement_params(id, altitude, temperature, pressure, wind_direction, wind_speed, bullet_variance, measurement_bundle_id) values
+    (1, 100, 15.0, 750, 0, 0, null, 1),
+    (2, 200, 25.0, 765, 15, 6, null, 2),
+    (3, 600, -3.0, 743, 40, null, 30, 3)
 on conflict (id) do nothing;
 
-select * from measurement_bundles
-join measurement_params on measurement_params.id = measurement_bundles.measurement_param_id
-join equipment_types on equipment_types.id = measurement_params.equipment_type_id
-join users on users.id = measurement_params.user_id
-join job_positions on job_positions.id = users.job_position_id;
+insert into measurement_units(id, name) values
+    (1, 'метр'),
+    (2, 'мм ртутного столба'),
+    (3, 'метр в секунду'),
+    (4, 'градус цельсия'),
+    (5, 'градус')
+on conflict (id) do nothing;
+
+select *
+from measurement_bundles mb
+join measurement_params mp
+    on mp.measurement_bundle_id = mb.id
+join equipment_types et
+    on et.id = mb.equipment_type_id
+join users u
+    on u.id = mb.user_id
+join job_positions jp
+    on jp.id = u.job_position_id;
 
