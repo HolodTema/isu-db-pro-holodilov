@@ -29,15 +29,6 @@ comment on column measurement_param_types.id is 'Уникальный идент
 comment on column measurement_param_types.name is 'Название типа параметра';
 comment on column measurement_param_types.measurement_unit_id is 'Cсылка на единицу измерения';
 
-create table if not exists equipment_param_types(
-    equipment_type_id int not null,
-    measurement_param_type_id int not null
-);
-
-comment on table  equipment_param_types is 'Логическая связка типов оборудования и типов параметров';
-comment on column equipment_param_types.equipment_type_id is 'Логическая ссылка на тип оборудования';
-comment on column equipment_param_types.measurement_param_type_id is 'Логическая ссылка на тип параметра';
-
 insert into physical_quantities(id, name) values
     (1, 'Температура'),
     (2, 'Давление'),
@@ -61,12 +52,6 @@ insert into measurement_param_types(id, name, measurement_unit_id) values
     (4, 'Скорость ветра', 3),
     (5, 'Снос пуль', 5)
 on conflict (id) do nothing;
-
-insert into equipment_param_types(equipment_type_id, measurement_param_type_id) values
-    -- ВР
-    (1, 1), (1, 2), (1, 3), (1, 5),
-    -- ДМК
-    (2, 1), (2, 2), (2, 3), (2, 4);
 
 create table if not exists measurement_params_temp(
     id serial primary key,
