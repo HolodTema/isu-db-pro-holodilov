@@ -1,13 +1,39 @@
--- каждый юзер должен иметь одинаковое число пачек
--- если все верно, то в столбце amount_bundles_per_user все значения
--- равны между собой
-select * from users t1
-left join
+-- каждый юзер должен иметь одинаковое количество пачек
+-- если все верно, то min = max
+-- 
+-- Как работает запрос. В подзапросе мы получаем 2 столбца: id-юзера и сколько пачек
+-- имеет этот юзер. 
+-- Во внешнем запросе мы получаем минимальное и максимальное значение из столбца с 
+-- количеством пачек на юзера. То есть если min = max, то все значения в этом столбце
+-- равны между собой. А значит все юзеры имеют одинаковое количество пачек.
+select min(inner_t.amount_bundles_per_user), max(inner_t.amount_bundles_per_user)
+from (
+	select t1.id as user_id, count(t2.id) as amount_bundles_per_user from users t1
+	left join measurement_bundles t2
+	on t1.id = t2.user_id
+	group by t1.id
+) as inner_t;
+
+
+-- каждый юзер должен иметь одинаковое количество измеренных им параметров
+-- если все верно, то min = max
+-- 
+-- Как работает запрос. В подзапросе мы получаем 2 столбца: id-юзера и сколько парамтров
+-- измерил этот юзер. 
+-- Во внешнем запросе мы получаем минимальное и максимальное значение из столбца с 
+-- количеством параметров на юзера. То есть если min = max, то все значения в этом столбце
+-- равны между собой. А значит все юзеры имеют одинаковое количество параметров.
+select min(inner_t.amount_params_per_user), max(inner_t.amount_params_per_user)
+from
 (
-	select t1.user_id, count(*) as amount_bundles_per_user 
-	from measurement_bundles t1
-	group by t1.user_id
-) as t2 on t1.id = t2.user_id;
+	select 
+		t1.id as user_id,
+		count(t3.id) as amount_params_per_user
+	from users t1
+	left join measurement_bundles t2 on t1.id = t2.user_id
+	left join measurement_params t3 on t3.measurement_bundle_id = t2.id
+	group by t1.id
+) as inner_t;
 
 
 -- проверяем, что не существует пачек, у которых нет параметров
@@ -30,9 +56,11 @@ select measurement_bundle_id, amount_params_per_bundle from
 	group by measurement_bundle_id
 ) where amount_params_per_bundle != 5;
 
+
 -- я в промпте просил Гигачат насоздавать 12 пачек. Проверим это для дальнейших запросов
 -- должно быть число 12
 select count(*) from measurement_bundles;
+
 
 -- проверяем, что каждая пачка содержит ровно 1 параметр с типом парметра altitude
 -- если все верно, то результатом будет таблица, где каждой из 12 пачек
@@ -82,182 +110,49 @@ inner join
 group by t1.measurement_bundle_id;
 
 
--- проверяем, что все параметры с типом temperature
--- имеют значения в диапазоне от -58 до +58
--- если все верно, то вернется пустая таблица.
+-- проверяем, что все параметры имеют значения в правильных диапазонах
+-- если все значения всех параметров верны, то результатом будет пустая таблица.
 --
--- То есть запрос получает все параметры с типом temperature,
--- и потом отбирает те, у которых значение НЕ В НОРМЕ. Поэтому
--- пустая таблица - верный результат.
-select t1.value from measurement_params t1
-inner join
-(
-	select t1.id from measurement_param_types t1
-	where t1.name = 'temperature'
-) as t2 on t1.measurement_param_type_id = t2.id
-where value < -58 or value > 58;
+-- если какие-то параметры имеют ненормальные значения, id, имя и тип таких параметров
+-- будут в таблице
+select
+    t1.id as param_id,
+    t2.name as param_type_name,
+    t1.measurement_bundle_id as bundle_id,
+    t1.value as param_value
+from measurement_params t1
+join measurement_param_types t2
+    on t1.measurement_param_type_id = t2.id
+where
+    (t2.name = 'temperature' and (t1.value < -58 or t1.value > 58))
+or (t2.name = 'pressure' and (t1.value < 500 or t1.value > 900))
+or (t2.name = 'wind_direction' and (t1.value < 0   or t1.value > 59))
+or (t2.name = 'wind_speed' and (t1.value < 0   or t1.value > 15))
+or (t2.name = 'bullet_variance' and (t1.value < 0   or t1.value > 150));
 
 
--- проверяем, что все параметры с типом pressure
--- имеют значения в диапазоне от 500 до 900
--- если все верно, то вернется пустая таблица.
---
--- То есть запрос получает все параметры с типом pressure,
--- и потом отбирает те, у которых значение НЕ В НОРМЕ. Поэтому
--- пустая таблица - верный результат.
-select t1.value from measurement_params t1
-inner join
-(
-	select t1.id from measurement_param_types t1
-	where t1.name = 'pressure'
-) as t2 on t1.measurement_param_type_id = t2.id
-where value < 500 or value > 900;
+-- проверяем, что физические величины связаны с правильными единицами измерения.
+-- Например, что длина связана с метрами, а температура с градусами цельсия.
+-- Все верно, если пары значений из unit_name и quantity_name верны.
+select 
+	t1.id as unit_id, 
+	t1.name as unit_name, 
+	t2.id as quantity_id, 
+	t2.name as quantity_name 
+from measurement_units t1
+inner join physical_quantities t2
+on t1.physical_quantity_id = t2.id;
 
 
--- проверяем, что все параметры с типом wind_direction
--- имеют значения в диапазоне от 0 до 59
--- если все верно, то вернется пустая таблица.
---
--- То есть запрос получает все параметры с типом wind_direction,
--- и потом отбирает те, у которых значение НЕ В НОРМЕ. Поэтому
--- пустая таблица - верный результат.
-select t1.value from measurement_params t1
-inner join
-(
-	select t1.id from measurement_param_types t1
-	where t1.name = 'wind_direction'
-) as t2 on t1.measurement_param_type_id = t2.id
-where value < 0 or value > 59;
-
-
--- проверяем, что все параметры с типом wind_speed
--- имеют значения в диапазоне от 0 до 15
--- если все верно, то вернется пустая таблица.
---
--- То есть запрос получает все параметры с типом wind_speed,
--- и потом отбирает те, у которых значение НЕ В НОРМЕ. Поэтому
--- пустая таблица - верный результат.
-select t1.value from measurement_params t1
-inner join
-(
-	select t1.id from measurement_param_types t1
-	where t1.name = 'wind_speed'
-) as t2 on t1.measurement_param_type_id = t2.id
-where value < 0 or value > 15;
-
-
--- проверяем, что все параметры с типом bullet_variance
--- имеют значения в диапазоне от 0 до 150
--- если все верно, то вернется пустая таблица.
---
--- То есть запрос получает все параметры с типом bullet_variance,
--- и потом отбирает те, у которых значение НЕ В НОРМЕ. Поэтому
--- пустая таблица - верный результат.
-select t1.value from measurement_params t1
-inner join
-(
-	select t1.id from measurement_param_types t1
-	where t1.name = 'bullet_variance'
-) as t2 on t1.measurement_param_type_id = t2.id
-where value < 0 or value > 150;
-
-
--- проверяем, что физическая величина Длина имеет только единицы измерения,
--- связанные с длиной. Все верно если результатом будет одно имя - метр.
-select t1.name from measurement_units t1
-inner join
-(
-	select t1.id from physical_quantities t1
-	where t1.name = 'Длина'
-) as t2 on t1.physical_quantity_id = t2.id;
-
-
--- проверяем, что физическая величина Давление имеет только единицы измерения,
--- связанные с давлением. Все верно если результатом будет одно имя - миллиметр ртутного столба.
-select t1.name from measurement_units t1
-inner join
-(
-	select t1.id from physical_quantities t1
-	where t1.name = 'Давление'
-) as t2 on t1.physical_quantity_id = t2.id;
-
-
--- проверяем, что физическая величина Температура имеет только единицы измерения,
--- связанные с температурой. Все верно если результатом будет одно имя - градус цельсия.
-select t1.name from measurement_units t1
-inner join
-(
-	select t1.id from physical_quantities t1
-	where t1.name = 'Температура'
-) as t2 on t1.physical_quantity_id = t2.id;
-
-
--- проверяем, что физическая величина Скорость имеет только единицы измерения,
--- связанные со скоростью. Все верно если результатом будет одно имя - метр в секунду.
-select t1.name from measurement_units t1
-inner join
-(
-	select t1.id from physical_quantities t1
-	where t1.name = 'Скорость'
-) as t2 on t1.physical_quantity_id = t2.id;
-
-
--- проверяем, что физическая величина Угол имеет только единицы измерения,
--- связанные со углом. Все верно если результатом будет одно имя - градус.
-select t1.name from measurement_units t1
-inner join
-(
-	select t1.id from physical_quantities t1
-	where t1.name = 'Угол'
-) as t2 on t1.physical_quantity_id = t2.id;
-
-
--- проверим, что если тип параметра называется altitude или bullet_variance, то он измеряется в метрах
--- все верно, если результатом будет таблица с двумя записями altitude и bullet_variance
-select t1.name from measurement_param_types t1
-inner join
-(
-	select t1.id from measurement_units t1 
-	where t1.name = 'метр'
-) as t2 on t1.measurement_unit_id = t2.id;
-
-
--- проверим, что если тип параметра называется temperature, то он измеряется в градусах Цельсия
--- все верно, если результатом будет таблица с одной записью temperature
-select t1.name from measurement_param_types t1
-inner join
-(
-	select t1.id from measurement_units t1 
-	where t1.name = 'градус Цельсия'
-) as t2 on t1.measurement_unit_id = t2.id;
-
-
--- проверим, что если тип параметра называется pressure, то он измеряется в миллиметрах ртутного столба
--- все верно, если результатом будет таблица с одной записью pressure
-select t1.name from measurement_param_types t1
-inner join
-(
-	select t1.id from measurement_units t1 
-	where t1.name = 'мм рт. ст.'
-) as t2 on t1.measurement_unit_id = t2.id;
-
-
--- проверим, что если тип параметра называется wind_direction, то он измеряется в градусах
--- все верно, если результатом будет таблица с одной записью wind_direction
-select t1.name from measurement_param_types t1
-inner join
-(
-	select t1.id from measurement_units t1 
-	where t1.name = 'градус'
-) as t2 on t1.measurement_unit_id = t2.id;
-
-
--- проверим, что если тип параметра называется wind_speed, то он измеряется в метрах в секунду
--- все верно, если результатом будет таблица с одной записью wind_speed
-select t1.name from measurement_param_types t1
-inner join
-(
-	select t1.id from measurement_units t1 
-	where t1.name = 'метр в секунду'
-) as t2 on t1.measurement_unit_id = t2.id;
+-- проверим, что типы параметров связаны с правильными единицами измерения.
+-- Например, что altitude связана с метрами, а wind_direction связано с углом.
+-- Все верно, если пары значений из param_type_name и unit_name верны.
+select 
+	t1.id as param_type_id, 
+	t1.name as param_type_name, 
+	t2.id as unit_id, 
+	t2.name as unit_name
+from measurement_param_types t1
+inner join measurement_units t2
+on t1.measurement_unit_id = t2.id;
 
