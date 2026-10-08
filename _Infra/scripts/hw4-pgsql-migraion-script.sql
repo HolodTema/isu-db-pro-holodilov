@@ -61,7 +61,8 @@ begin
             pressure_variance int not null,
             temperature_variance int not null,
             user_id int not null,
-            equipment_type_id int not null
+            equipment_type_id int not null,
+            temperature_correction_id int not null
         );
 		create sequence seq_measurement_bundles start with 1;
 		alter table measurement_bundles 
@@ -159,20 +160,21 @@ begin
             pressure_variance, 
             temperature_variance, 
             user_id, 
-            equipment_type_id
+            equipment_type_id,
+            temperature_correction_id
         ) values 
-        ('2026-10-03 21:07:52.491913', 150, 10, 2, 1, 1),
-        ('2026-10-03 21:07:52.491913', -50, 5, -1, 1, 2),
-        ('2026-10-03 21:07:52.491913', 300, 15, 5, 1, 1),
-        ('2026-10-03 21:07:52.491913', 0, 0, 0, 2, 2),
-        ('2026-10-03 21:07:52.491913', 220, 8, 1, 2, 1),
-        ('2026-10-03 21:07:52.491913', 80, 2, -3, 2, 2),
-        ('2026-10-03 21:07:52.491913', 500, 20, 10, 3, 1),
-        ('2026-10-03 21:07:52.491913', -200, 12, 4, 3, 2),
-        ('2026-10-03 21:07:52.491913', 50, 3, -2, 3, 1),
-        ('2026-10-03 21:07:52.491913', 1000, 25, 15, 4, 2),
-        ('2026-10-03 21:07:52.491913', 400, 18, 8, 4, 1),
-        ('2026-10-03 21:07:52.491913', 250, 6, 0, 4, 2);
+        ('2026-10-03 21:07:52.491913', 150, 10, 2, 1, 1, 5),
+        ('2026-10-03 21:07:52.491913', -50, 5, -1, 1, 2, 3),
+        ('2026-10-03 21:07:52.491913', 300, 15, 5, 1, 1, 6),
+        ('2026-10-03 21:07:52.491913', 0, 0, 0, 2, 2, 4),
+        ('2026-10-03 21:07:52.491913', 220, 8, 1, 2, 1, 4),
+        ('2026-10-03 21:07:52.491913', 80, 2, -3, 2, 2, 2),
+        ('2026-10-03 21:07:52.491913', 500, 20, 10, 3, 1, 3),
+        ('2026-10-03 21:07:52.491913', -200, 12, 4, 3, 2, 7),
+        ('2026-10-03 21:07:52.491913', 50, 3, -2, 3, 1, 1),
+        ('2026-10-03 21:07:52.491913', 1000, 25, 15, 4, 2, 2),
+        ('2026-10-03 21:07:52.491913', 400, 18, 8, 4, 1, 6),
+        ('2026-10-03 21:07:52.491913', 250, 6, 0, 4, 2, 4);
 
 
         insert into measurement_params (measurement_bundle_id, measurement_param_type_id, value) 
@@ -267,6 +269,10 @@ begin
         alter table measurement_bundles
         add constraint fk_measurement_bundles_equipment_type
         foreign key (equipment_type_id) references equipment_types(id);
+
+        alter table measurement_bundles
+        add constraint fk_measurement_bundles_temperature_correction
+        foreign key (temperature_correction_id) references temperature_corrections(id);
 
         alter table measurement_param_types
         add constraint fk_measurement_param_types_measurement_unit
