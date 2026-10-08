@@ -120,20 +120,20 @@ begin
 		
 		insert into job_positions(name, description) values
 		('Командир метеоотделения', 'Командует отделением солдат для определения погоды'),
-		('Администратор метеокомплекта', 'Использует оборудование для получения данных о погоде')
+		('Администратор метеокомплекта', 'Использует оборудование для получения данных о погоде');
 		
 		insert into users(first_name, last_name, job_position_id) values
 		('Иван', 'Иванов', 1),
 		('Пётр', 'Петров', 2),
 		('Александр', 'Сидоров', 2),
-		('Василий', 'Пупкин', 2)
+		('Василий', 'Пупкин', 2);
 
 		insert into physical_quantities(name) values
 		('Температура'),
 		('Давление'),
 		('Скорость'),
 		('Угол'),
-		('Расстояние')
+		('Расстояние');
 	
 		
 		insert into measurement_units(name, physical_quantity_id) values
@@ -141,7 +141,7 @@ begin
 		('мм рт. ст.', 2),
 		('Метр в секунду', 3),
 		('Градус', 4),
-		('Mетр', 5)
+		('Mетр', 5);
 	
 		
 		insert into measurement_param_types(name, measurement_unit_id) values
@@ -150,8 +150,9 @@ begin
 		('Атмосферное давление', 2),
 		('Направление ветра', 4),
 		('Скорость ветра', 3),
-		('Снос пуль', 5)
+		('Снос пуль', 5);
 	
+
         insert into measurement_bundles (
             created_at, 
             altitude, 
@@ -172,6 +173,7 @@ begin
         ('2026-10-03 21:07:52.491913', 1000, 25, 15, 4, 2),
         ('2026-10-03 21:07:52.491913', 400, 18, 8, 4, 1),
         ('2026-10-03 21:07:52.491913', 250, 6, 0, 4, 2);
+
 
         insert into measurement_params (measurement_bundle_id, measurement_param_type_id, value) 
         values 
@@ -235,6 +237,7 @@ begin
         (12, 3, 785),
         (12, 4, 24),
         (12, 6, 10);
+
 
         insert into temperature_corrections(low_border, high_border, correction) values
         (null, 0, 0),
