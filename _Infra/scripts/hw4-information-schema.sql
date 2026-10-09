@@ -12,12 +12,14 @@ select
 from (
     select table_name as name, 'Таблица' as type
     from information_schema.tables
-    where table_schema = 'public'
+    where table_catalog = 'holodilov_artillery_db'
+        and table_schema = 'public'
 		and table_type = 'BASE TABLE'
     union all
     select sequence_name as name, 'Последовательность' as type
     from information_schema.sequences
-    where sequence_schema = 'public'
+    where sequence_catalog = 'holodilov_artillery_db' 
+        and sequence_schema = 'public'
 ) as t
 order by number;
 
