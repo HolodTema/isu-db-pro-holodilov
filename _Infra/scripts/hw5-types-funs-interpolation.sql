@@ -36,14 +36,14 @@ begin
 				(
 					(
 						select t.high_border as x0, t.correction as y0 from temperature_corrections t
-						where t.high_border <= 20
+						where t.high_border <= par_temperature
 						order by t.high_border desc
 						limit 1
 					)
 					union all
 					(
-						select 20 as x0, t.correction as y0 from temperature_corrections t
-						where t.high_border >=20
+						select par_temperature as x0, t.correction as y0 from temperature_corrections t
+						where t.high_border >=par_temperature
 						order by t.high_border
 						limit 1
 					)
@@ -53,14 +53,14 @@ begin
 				(
 					(
 						select t.low_border as x1, t.correction as y1 from temperature_corrections t
-						where t.low_border >= 20
+						where t.low_border >= par_temperature
 						order by low_border
 						limit 1
 					)
 					union all
 					(
-						select 20 as x1, t.correction as y1 from temperature_corrections t
-						where t.low_border <= 20
+						select par_temperature as x1, t.correction as y1 from temperature_corrections t
+						where t.low_border <= par_temperature
 						order by low_border desc
 						limit 1
 					)
