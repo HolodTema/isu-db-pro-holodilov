@@ -77,6 +77,73 @@ begin
     end;
 
     begin
+        create or replace function public.count_param_errors
+            (
+                params public.measurement_params_t
+            )
+            returns int
+            language 'plpgsql'
+        as $body$
+        declare
+            var_count int := 0;
+            min_limit numeric(20, 10);
+            max_limit numeric(20, 10);
+            e record;
+        begin
+            -- словарь сопоставлений: имя поля в типе -> имя параметра в const_*
+            create table if not exists dict_param_names (
+                param_name text,
+                param_value numeric(20, 10)
+            );
+            truncate dict_param_names;
+            insert into dict_param_names values
+            ('Высота метеопоста', params.altitude),
+            ('Температура воздуха', params.temperature),
+            ('Атмосферное давление', params.pressure),
+            ('Направление ветра', params.wind_direction);
+
+            if params.equipment_type_id = 1 then
+                insert into dict_param_names values
+                ('Скорость ветра', params.wind_speed);
+            end if;
+
+            if params.equipment_type_id = 2 then
+                insert into dict_param_names values
+                ('Снос пуль', params.bullet_variance);
+            end if;
+
+            for e in select param_name, param_value from dict_param_names loop
+                min_limit := public.get_measurement_param_limit(e.param_name, 'min');
+                max_limit := public.get_measurement_param_limit(e.param_name, 'max');
+
+                if min_limit is null and max_limit is null then
+                    continue;
+                end if;
+
+                if min_limit is null and e.param_value > max_limit then
+                    var_count := var_count + 1;
+                    continue;
+                end if;
+
+                if max_limit is null and e.param_value < min_limit then
+                    var_count := var_count + 1;
+                    continue;
+                end if;
+
+                if not (e.param_value between min_limit and max_limit) then
+                    var_count := var_count + 1;
+                end if;
+            end loop;
+
+            return var_count;
+        end;
+        $body$;
+
+        alter function public.count_param_errors(public.measurement_params_t)
+            owner to postgres;
+    end;
+
+    begin
         create or replace function public.validate_measurement_params
 			(
 				params public.measurement_params_t
