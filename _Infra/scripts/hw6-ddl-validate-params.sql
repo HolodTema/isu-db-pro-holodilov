@@ -77,6 +77,47 @@ begin
     end;
 
     begin
+        create or replace function public.check_param_errors
+        (
+            param_name text,
+            param_value numeric(20, 10),
+            on_min_limit_error_callback text,
+            on_max_limit_error_callback text,
+            on_min_max_limit_error_callback text
+        )
+        as $body$
+        declare
+            min_limit numeric(20, 10);
+            max_limit numeric(20, 10);
+        begin
+            min_limit := public.get_measurement_param_limit(param_name, 'min');
+            max_limit := public.get_measurement_param_limit(param_name, 'max');
+
+            if min_limit is null and max_limit is null then
+                return;
+            end if;
+
+            if min_limit is null and 
+            -- вызываем функцию-коллбэк по ее названию 
+            execute format('select %s($1)', on_min_limit_error_callback::regproc)
+            into ...
+            using ...;
+
+            
+        end;
+        $body$;
+        
+        alter function public.check_param_errors(text, text, text, text)
+            owner to postgres;
+    end;
+
+    begin
+        create or replace function public.on_min_limit_error_callback
+        (
+            inout 
+        )
+    end;
+    begin
         create or replace function public.count_param_errors
             (
                 params public.measurement_params_t
@@ -89,7 +130,19 @@ begin
             min_limit numeric(20, 10);
             max_limit numeric(20, 10);
             e record;
-        begin
+ 
+       begin
+            min_limit := public.get_measurement_param_limit('Высота метеопоста', 'min');
+            max_limit := public.get_measurement_param_limit('Высота метеопоста', 'max');
+
+            if min_limit is null and max_limit is not null and e.param_value > max_limit then
+                var_count := var_count + 1;
+            elsif then
+
+            else
+
+            end if;
+
             -- словарь сопоставлений: имя поля в типе -> имя параметра в const_*
             create table if not exists dict_param_names (
                 param_name text,
