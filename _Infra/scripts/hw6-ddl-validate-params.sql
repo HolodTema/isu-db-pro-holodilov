@@ -14,128 +14,69 @@ begin
 		alter type public.measurement_params_t owner to postgres;
     end;
 
-    -- создаем функцию, которая возвращает минимальный-максимальный лимит для определенного
-    -- типа параметра
-    begin
-        create or replace function public.get_measurement_param_limit
-			(
-				param_name text,
-                limit_type char(3)
-			)
-		    returns numeric(20, 10)
-		    language 'plpgsql'
-		as $BODY$
-        declare
-            result numeric(20, 10);
-		begin
-            if limit_type = 'min' then
-                select min_limit into result from const_measurement_param_limits t1
-                inner join measurement_param_types t2 on t1.measurement_param_type_id = t2.id
-                where t2.name = param_name;
-
-                return result;
-            end if;
-
-            if limit_type = 'max' then
-                select max_limit into result from const_measurement_param_limits t1
-                inner join measurement_param_types t2 on t1.measurement_param_type_id = t2.id
-                where t2.name = param_name;
-
-                return result;
-            end if;
-            return null;
-        end;
-		$BODY$;
-		
-		alter function public.get_measurement_param_limit(text, char(3))
-		    owner to postgres;
-    end;
-
-    -- создаем функцию, которая возвращает текст ошибки, в случае если в значении параметра
-    -- имеется ошибка
-    begin
-        create or replace function public.get_measurement_param_limit_error
-			(
-				param_name text
-			)
-		    returns varchar(100)
-		    language 'plpgsql'
-		as $BODY$
-        declare
-            result varchar(100);
-		begin
-            select t1.error_text into result from const_measurement_param_limits t1
-            inner join measurement_param_types t2 on t1.measurement_param_type_id = t2.id
-            where t2.name = param_name;
-
-            return result;
-        end;
-		$BODY$;
-		
-		alter function public.get_measurement_param_limit_error(text)
-		    owner to postgres;
-    end;
-
     begin
         create or replace function public.count_param_errors
-            (
-                params public.measurement_params_t
-            )
-            returns int
-            language 'plpgsql'
+        (
+            params public.measurement_params_t
+        )
+        returns int
+        language 'plpgsql'
         as $body$
-        declare
-            var_count int := 0;
-            min_limit numeric(20, 10);
-            max_limit numeric(20, 10);
-            e record;
         begin
-            -- словарь сопоставлений: имя поля в типе -> имя параметра в const_*
-            create table if not exists dict_param_names (
-                param_name text,
-                param_value numeric(20, 10)
+            -- вместо цикла и создания временной таблицы я использую CTE
+            -- и тогда даже вспомогательные функции, которые были у меня раньше
+            -- (по типу get_measurement_param_limit) не нужны
+            --
+            -- то есть мы создаем словарь имя_параметра: значение_параметра без 
+            -- создания таблицы, просто на лету и называем этот словарь param_names_values
+            --
+            -- далее делаем CTE из этого param_names_values, и считаем число строк, где есть ошибка
+            -- используя функцию-аггрегатор count
+            --
+            -- а условия, когда происходит ошибка (превышения лимитов) задаем в where
+            return (
+                with param_names_values(param_name, param_value) as
+                (
+                    -- эта конструкция select from values, где values создаются на лету,
+                    -- должна быть быстрой, так как не меняются данные в долговременной памяти,
+                    -- то есть не меняется сама БД (не создаются таблицы как у меня было раньше)
+                    --
+                    -- эти values сразу в RAM и из этого же RAM берутся в select, быстро обрабатываются
+                    -- и удаляются из RAM
+                    select * from
+                    (
+                        values ('Высота метеопоста', params.altitude),
+                        ('Температура воздуха', params.temperature),
+                        ('Атмосферное давление', params.pressure),
+                        ('Направление ветра', params.wind_direction)
+                    ) v
+                    union all
+                    (
+                        select 'Скорость ветра', params.wind_speed
+                        where params.equipment_type_id = 1
+                    )
+                    union all
+                    (
+                        select 'Снос пуль', params.bullet_variance
+                        where params.equipment_type_id = 2
+                    )
+                )
+                select count(*)
+                from param_names_values
+                inner join measurement_param_types t1 on t1.name = param_names_values.param_name
+                inner join const_measurement_param_limits t2 on t2.measurement_param_type_id = t1.id
+                where 
+                (t2.min_limit is null and param_names_values.param_value > t2.max_limit)
+                or
+                (t2.max_limit is null and param_names_values.param_value < t2.min_limit)
+                or
+                (t2.min_limit is not null and t2.max_limit is not null and 
+                    (
+                        param_names_values.param_value < t2.min_limit or 
+                        param_names_values.param_value > t2.max_limit
+                    )
+                )
             );
-            truncate dict_param_names;
-            insert into dict_param_names values
-            ('Высота метеопоста', params.altitude),
-            ('Температура воздуха', params.temperature),
-            ('Атмосферное давление', params.pressure),
-            ('Направление ветра', params.wind_direction);
-
-            if params.equipment_type_id = 1 then
-                insert into dict_param_names values
-                ('Скорость ветра', params.wind_speed);
-            end if;
-
-            if params.equipment_type_id = 2 then
-                insert into dict_param_names values
-                ('Снос пуль', params.bullet_variance);
-            end if;
-
-            for e in select param_name, param_value from dict_param_names loop
-                min_limit := public.get_measurement_param_limit(e.param_name, 'min');
-                max_limit := public.get_measurement_param_limit(e.param_name, 'max');
-
-                if min_limit is null and max_limit is null then
-                    continue;
-                end if;
-
-                if min_limit is null and e.param_value > max_limit then
-                    var_count := var_count + 1;
-                    continue;
-                end if;
-
-                if max_limit is null and e.param_value < min_limit then
-                    var_count := var_count + 1;
-                    continue;
-                end if;
-
-                if not (e.param_value between min_limit and max_limit) then
-                    var_count := var_count + 1;
-                end if;
-            end loop;
-
-            return var_count;
         end;
         $body$;
 
@@ -145,66 +86,55 @@ begin
 
     begin
         create or replace function public.validate_measurement_params
-			(
-				params public.measurement_params_t
-			)
-		    returns text
-		    language 'plpgsql'
+	    (
+	        params public.measurement_params_t
+		)
+        returns text
+		language 'plpgsql'
 		as $BODY$
-		declare
-            str_errors text := '';
-            min_limit numeric(20, 10);
-            max_limit numeric(20, 10);
-            -- для цикла for
-            e record;
 		begin
-            -- надо как-то сопоставить названия полей в типе данных measurement_params_t
-            -- c именами полей в нашей БД - они на русском и на английском
-            -- в PL нет словарей, но можно сделать временную таблицу, как словарь
-            create table if not exists dict_param_names (
-                param_name text, 
-                param_value numeric(20, 10)
+            -- тут тот же механизм что и в count_param_errors()
+            return (
+                with param_names_values(param_name, param_value) as
+                (
+                    select * from
+                    (
+                        values ('Высота метеопоста', params.altitude),
+                        ('Температура воздуха', params.temperature),
+                        ('Атмосферное давление', params.pressure),
+                        ('Направление ветра', params.wind_direction)
+                    ) v
+                    union all
+                    (
+                        select 'Скорость ветра', params.wind_speed
+                        where params.equipment_type_id = 1
+                    )
+                    union all
+                    (
+                        select 'Снос пуль', params.bullet_variance
+                        where params.equipment_type_id = 2
+                    )
+                )
+                -- string_agg() собираем строки из всех записей в одну строку с заданным разделителем
+                -- у нас в таблице констант есть столбец error_text со строками ошибок
+                -- мы их склеиваем через разделитель переноса строки
+                -- а если ошибок нет, string_agg вернет null и мы обрабатываем null через coalesce
+                select coalesce(string_agg(t2.error_text, E'\n'), '')
+                from param_names_values
+                inner join measurement_param_types t1 on t1.name = param_names_values.param_name
+                inner join const_measurement_param_limits t2 on t2.measurement_param_type_id = t1.id
+                where 
+                (t2.min_limit is null and param_names_values.param_value > t2.max_limit)
+                or
+                (t2.max_limit is null and param_names_values.param_value < t2.min_limit)
+                or
+                (t2.min_limit is not null and t2.max_limit is not null and 
+                    (
+                        param_names_values.param_value < t2.min_limit or 
+                        param_names_values.param_value > t2.max_limit
+                    )
+                )
             );
-            truncate dict_param_names;
-            insert into dict_param_names values
-            ('Высота метеопоста', params.altitude),
-            ('Температура воздуха', params.temperature),
-            ('Атмосферное давление', params.pressure),
-            ('Направление ветра', params.wind_direction);
-
-            if params.equipment_type_id = 1 then
-                insert into dict_param_names values
-                ('Скорость ветра', params.wind_speed);
-            end if;
-
-            if params.equipment_type_id = 2 then
-                insert into dict_param_names values
-                ('Снос пуль', params.bullet_variance);
-            end if;
-                
-            for e in select param_name, param_value from dict_param_names loop
-                min_limit := public.get_measurement_param_limit(e.param_name, 'min');
-                max_limit := public.get_measurement_param_limit(e.param_name, 'max');
-                if min_limit is null and max_limit is null then
-                    continue;
-                end if;
-
-                if min_limit is null and e.param_value > max_limit then
-                    str_errors := str_errors || public.get_measurement_param_limit_error(e.param_name) || E'\n';
-                    continue;
-                end if;
-
-                if max_limit is null and e.param_value < min_limit then
-                    str_errors := str_errors || public.get_measurement_param_limit_error(e.param_name) || E'\n';
-                    continue;
-                end if;
-
-                if not (e.param_value between min_limit and max_limit) then
-                    str_errors := str_errors || public.get_measurement_param_limit_error(e.param_name) || E'\n';
-                end if;
-            end loop;
-
-           	return str_errors;
 		end;
 		$BODY$;
 		
