@@ -52,7 +52,7 @@ begin
         comment on table correction_headers is 'Справочник заголовков таблиц';
 		comment on column correction_headers.id is 'Уникальный код';
 		comment on column correction_headers.equipment_type_id is 'Тип оборудования';
-		comment on column correction_headers.correction_header_i is 'Тип заголовка';
+		comment on column correction_headers.correction_header_type_id is 'Тип заголовка';
 		comment on column correction_headers.header_values is 'Значения в заголовке';
 
 
@@ -78,7 +78,7 @@ begin
         comment on table corrections is 'Универсальная таблица корректировок';
 		comment on column corrections.id is 'Уникальный код';
 		comment on column corrections.const_altitude_id is 'Код высоты';
-		comment on column corrections.correction_type_id is 'Код типа таблиц';
+		comment on column corrections.correction_header_id is 'Код типа таблиц';
 		comment on column corrections.row_values is 'Значения с корректировками';
 	end;
 
@@ -105,7 +105,7 @@ begin
 
 
         -- конкретные заголовки конкретных таблиц 
-		insert into correction_types(
+		insert into correction_headers(
             equipment_type_id, 
             correction_header_type_id, 
             header_values
