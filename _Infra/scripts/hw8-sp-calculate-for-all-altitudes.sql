@@ -108,7 +108,7 @@ do $$
 		inner join correction_headers t2 on t1.correction_header_id = t2.id
 		inner join correction_header_types t3 on t2.correction_header_type_id = t3.id
 		inner join const_altitudes t4 on t1.const_altitude_id = t4.id
-		where t3.description = 'Таблица 2, Температура' 
+		where t3.description ilike '%таблица 2%' 
 		and t4.altitude = par_altitude 
 		and (
 			(var_is_virtual_temperature_variance_negative and t1.row_values[1] < 0)
@@ -121,7 +121,9 @@ do $$
 		into var_header_values
 		from correction_headers t1
 		inner join correction_header_types t2 on t1.correction_header_type_id = t2.id
-		where t2.description = 'Таблица 2, Температура'
+        -- здесь можно искать не точное совпадение строки, а слово в строке
+        -- можно искать регистронезависимо через ilike
+		where t2.description ilike '%таблица 2%'
 		limit 1;
 		-- теперь нужно проверить, есть ли наша температура в var_header_values
 		-- если да, получим индекс var_certain_header_index, используя array_position
@@ -174,7 +176,7 @@ do $$
 		inner join correction_headers t2 on t1.correction_header_id = t2.id
 		inner join correction_header_types t3 on t2.correction_header_type_id = t3.id
 		inner join const_altitudes t4 on t1.const_altitude_id = t4.id
-		where t3.description = 'Таблица 3, Направление среднего ветра'
+		where t3.description ilike '%Направление среднего ветра%'
 			and t4.altitude = par_altitude
 			and (
 				par_is_dmk and t2.equipment_type_id = 1 
@@ -221,7 +223,7 @@ do $$
 		inner join correction_headers t2 on t1.correction_header_id = t2.id
 		inner join correction_header_types t3 on t2.correction_header_type_id = t3.id
 		inner join const_altitudes t4 on t1.const_altitude_id = t4.id
-		where t3.description = 'Таблица 3, Скорость среднего ветра'
+		where t3.description ilike '%Скорость среднего ветра%'
 			and t4.altitude = par_altitude
 			and t2.equipment_type_id = 1;
 	
@@ -231,7 +233,7 @@ do $$
 		into var_header_values
 		from correction_headers t1
 		inner join correction_header_types t2 on t1.correction_header_type_id = t2.id
-		where t2.description = 'Таблица 3, Скорость среднего ветра'
+		where t2.description ilike '%скорость среднего ветра%'
 			and t1.equipment_type_id = 1;
 	
 		-- теперь в массиве заголовка надо найти индекс, в котором лежит наше 
@@ -282,7 +284,7 @@ do $$
 		inner join correction_headers t2 on t1.correction_header_id = t2.id
 		inner join correction_header_types t3 on t2.correction_header_type_id = t3.id
 		inner join const_altitudes t4 on t1.const_altitude_id = t4.id
-		where t3.description = 'Таблица 3, Скорость среднего ветра'
+		where t3.description ilike '%скорость среднего ветра%'
 			and t4.altitude = par_altitude
 			and t2.equipment_type_id = 2;
 	
@@ -291,7 +293,7 @@ do $$
 		into var_header_values
 		from correction_headers t1
 		inner join correction_header_types t2 on t1.correction_header_type_id = t2.id
-		where t2.description = 'Таблица 3, Скорость среднего ветра'
+		where t2.description ilike '%скорость среднего ветра%'
 			and t1.equipment_type_id = 2;
 	
 		-- теперь в массиве заголовка надо найти индекс, в котором лежит 
