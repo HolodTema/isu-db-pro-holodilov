@@ -1,5 +1,74 @@
 do $$
+    
+    -- бинарный поиск
+    --
+    -- возвращает либо индекс вхождения целевого элемента в массив,
+    -- либо (если вхождений нет) индекс элемента, после которого можно вставить
+    -- целевой элемент в отсортированный массив, чтобы сохранить
+    -- упорядоченность массива
+    --
+    -- на вход принимает отсортированный массив и целевой элемент
+    -- временная сложность O(logN)
+    create or replace function binary_search(
+        par_arr int[],
+        par_target int
+    )
+    returns int
+    language 'plpgsql'
+    as $body$
+    declare
+        low int;
+        high int;
+        mid int;
+        n int;
+    begin
+        if par_arr is null then
+            raise exception 'par_arr cannot be null';
+        end if;
+
+        if par_target is null then
+            raise exception 'par_target cannot be null';
+        end if;
+
+        n := coalesce(array_length(par_arr, 1), 0);
+        if n = 0 then
+            raise exception 'par_arr cannot be empty';
+        end if;
+
+        -- если целевой элемент меньше первого (минимального) элемента
+        -- массива, то целевой элемент можно вставить только в самое начало
+        -- массива. То есть 0 (индексы в plpgsql идут с единицы, а нулевой индекс 
+        -- будто бы идет перед первым элементом массива)
+        if par_target < par_arr[1] then
+            return 0;
+        end if;
+
+        -- аналогично, если целевой элемент больше последнего (максимального) 
+        -- элемента массива, то целевой элемент надо вставить в конец массива,
+        -- поэтому возвращаем последний индекс
+        if par_target >= par_arr[n] then
+            return n;
+        end if;
+
+        low := 1;
+		high := n;
+	    while low <= high loop
+	        mid := (low + high) / 2;
+            if par_arr[mid] = par_target then
+                return mid;
+            end if;
+	        if par_arr[mid] < par_target then
+	            low := mid + 1;
+	        else
+	            high := mid - 1;
+	        end if;
+	    end loop;
+	    return high;
+    end;
+    $body$;
 	
+
+
 	-- вспомогательная функция, которая по таблице 2 рассчитывает среднее отклонение температуры
 	-- для определенной высоты и измеренной температуры
 	create or replace function get_average_temperature_variance(
@@ -138,7 +207,6 @@ do $$
 		var_header_values int[];
 		var_row_values int[];
 		var_wind_index int;
-		var_result int;
 	begin
 		-- если скорость измеренного приземного ветра меньше 3 метров в секунду,
 		-- то можно сразу возвращать 0 по ТЗ
@@ -193,13 +261,8 @@ do $$
 	declare
 		var_header_values int[];
 		var_row_values int[];
-		var_wind_index int;
-		var_result int;
-		-- для бинарного поиска
-		low int;
-	    high int;
-	    mid int;
 		-- для интерполяции
+        var_low_index int;
 		var_x0 numeric;
 		var_x1 numeric;
 		var_y0 numeric;
@@ -239,40 +302,26 @@ do $$
 		-- например, дальность сноса пуль равна 126 метров
 		-- а в заголовке есть только значения 120 и 130 метров
 		-- в прошлых был расчет интерполяции по формуле пропорции
-		-- ее и можно использовать при var_wind_index is null
-		var_wind_index := array_position(var_header_values, par_bullet_variance::int);
-		if var_wind_index is not null then
-			return var_row_values[var_wind_index];
-		end if;
-	
-		-- обработаем случай, когда нужна интерполяция:
-		-- надо найти два соседних индекса, между которыми 
-		-- в отсортированном массиве var_header_values
-		-- можно вставить целевой элемент
-		--
-		-- так как var_header_values отсортирован, то вместо 
-		-- линейного поиска за О(N) можно сделать бинарный поиск за О(logN)
-		low := 1;
-		high := array_length(var_header_values, 1);
-	    while low <= high loop
-	        mid := (low + high) / 2;
-	        if var_header_values[mid] <= par_bullet_variance then
-	            low := mid + 1;
-	        else
-	            high := mid - 1;
-	        end if;
-	    end loop;
-	
-		-- интерполяция дальности сноса пуль
-		var_x0 := var_header_values[high];
-		var_x1 := var_header_values[high + 1];
-		var_y0 := var_row_values[high];
-		var_y1 := var_row_values[high + 1];
-		-- формула пропорции выглядит так, где var_y искомое значение
-		-- (par_bullet_variance - var_x0) / (var_x1 - var_x0) = (var_y - var_y0) / (var_y1 - var_y0);    
-		-- из этой формулы вытащим var_y
-		var_y := var_y0 + (par_bullet_variance - var_x0) * (var_y1 - var_y0) / (var_x1 - var_x0);
-		return round(var_y)::int;
+		-- ее и можно использовать если вхождения bullet_variance в заголовок нет
+        var_low_index := public.binary_search(var_header_values, par_bullet_variance::int);
+        -- проверяем есть ли вхождение нашего bullet_variance в заголовок
+        if var_header_values[var_low_index] = par_bullet_variance::int then
+            -- вхождение есть, интерполяция не нужна
+			return var_row_values[var_low_index];
+        else
+            -- вхождения нет, нужна интерполяция
+            var_x0 := var_header_values[var_low_index];
+		    var_x1 := var_header_values[var_low_index + 1];
+		    var_y0 := var_row_values[var_low_index];
+		    var_y1 := var_row_values[var_low_index + 1];
+            -- формула пропорции выглядит так, где var_y искомое значение
+		    -- (par_bullet_variance - var_x0) / (var_x1 - var_x0) = 
+            -- (var_y - var_y0) / (var_y1 - var_y0);    
+            --
+		    -- из этой формулы вытащим var_y
+            var_y := var_y0 + (par_bullet_variance - var_x0) * (var_y1 - var_y0) / (var_x1 - var_x0);
+		    return round(var_y)::int;
+        end if;
 	end;	
 	$body$;
 	
