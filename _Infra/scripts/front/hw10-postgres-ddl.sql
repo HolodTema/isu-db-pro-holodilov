@@ -92,6 +92,7 @@ begin
             alter column id set default nextval('seq_departments');
     end;
 
+    -- с точки зрения безопасности должен храниться не сам пароль сотрудника, а хеш пароля...
     begin
         create table staff
         (
@@ -100,7 +101,7 @@ begin
             last_name text,
             first_name text,
             middle_name text,
-            percent float,
+            password text,
             created_at timestamp default now()
         );
 
@@ -110,26 +111,12 @@ begin
     end;
 
     begin
-        create table roles
-        (
-            id bigint primary key, 
-            external_id bigint not null unique,
-            name text,
-            created_add timestamp default now()
-        );
-
-        create sequence seq_roles start with 1;
-        alter table roles
-            alter column id set default nextval('seq_roles');
-    end;
-
-    begin
         create table storage_operation_types
         (
             id bigint primary key,
             external_id bigint not null unique,
             name text,
-            convert_factor smallint,
+            factor int,
             created_at timestamp default now()
         );
 
@@ -138,19 +125,26 @@ begin
             alter column id set default nextval('seq_storage_operation_types');
     end;
 
+    -- в будущем можно сделать foreign key этой таблицы с продуктами, поставщиками и тд.
+    -- я не знаю, нужны ли foreign key сейчас
     begin
-        create table transaction_types
+        create table storage_operations
         (
             id bigint primary key,
             external_id bigint not null unique,
-            name text,
-            preview_group text,
+            product_id bigint,
+            vendor_id bigint,
+            storage_id bigint, 
+            unit_id bigint,
+            operation_type_id bigint,
+            price numeric(20, 10),
+            amount numeric(20, 10),
             created_at timestamp default now()
         );
 
-        create sequence seq_transaction_types start with 1;
-        alter table transaction_types
-            alter column id set default nextval('seq_transaction_types');
+        create sequence seq_storage_operations start with 1;
+        alter table storage_operations
+            alter column id set default nextval('seq_storage_operations');
     end;
 
     begin
