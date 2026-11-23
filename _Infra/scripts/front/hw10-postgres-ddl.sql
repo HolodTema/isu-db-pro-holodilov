@@ -35,8 +35,8 @@ begin
     begin
         create table if not exists units(
             id bigint primary key,
-            source_id bigint not null unique,
-            unit_name text,
+            external_id bigint not null unique,
+            name text,
             conversion_factor float,
             created_at timestamp default now()
         );
@@ -79,9 +79,11 @@ begin
         create table if not exists departments(
             id bigint primary key,
             external_id bigint not null unique,
-            name text,
-            inn text,
-            kpp text,
+            short_name text,
+            full_name text,
+            inn_state_id varchar(12),
+            kpp_state_id char(9),
+            ogrn_state_id char(13),
             created_at timestamp default now()
         );
 
