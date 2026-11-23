@@ -2,15 +2,15 @@ do $$
 begin
     begin
         create database front;
-    end;
+    end:
 
     begin
         create table if not exists products(
             id bigint primary key,
             external_id bigint not null unique,
             name text,
-            flaging smallint,
-            date_add timestamp default now()
+            flagging smallint,
+            created_at timestamp default now()
         );
 
 		create sequence seq_products start with 1;
@@ -24,7 +24,7 @@ begin
             external_id bigint not null unique,
             name text,
             parent_id bigint,
-            date_add timestamp default now()
+            created_at timestamp default now()
         );
 
         create sequence seq_categories start with 1;
@@ -38,7 +38,7 @@ begin
             source_id bigint not null unique,
             unit_name text,
             conversion_factor float,
-            date_add timestamp default now()
+            created_at timestamp default now()
         );
 
         create sequence seq_units start with 1;
@@ -53,7 +53,7 @@ begin
             name text,
             parent_id bigint,
             parent_name text,
-            date_add timestamp default now()
+            created_at timestamp default now()
         );
 
         create sequence seq_vendors start with 1;
@@ -66,7 +66,7 @@ begin
             id bigint primary key default nextval('seq_dim_storages'),
             external_id bigint not null unique,
             name text,
-            date_add timestamp default now()
+            created_at timestamp default now()
         );
 
         create sequence seq_storages start with 1;
@@ -82,7 +82,7 @@ begin
             name text,
             inn text,
             kpp text,
-            date_add timestamp default now()
+            created_at timestamp default now()
         );
 
         create sequence seq_departments start with 1;
@@ -99,7 +99,7 @@ begin
             first_name text,
             middle_name text,
             percent float,
-            date_add timestamp default now()
+            created_at timestamp default now()
         );
 
         create sequence seq_staff start with 1;
@@ -113,7 +113,7 @@ begin
             id bigint primary key, 
             external_id bigint not null unique,
             name text,
-            date_add timestamp default now()
+            created_add timestamp default now()
         );
 
         create sequence seq_roles start with 1;
@@ -127,8 +127,8 @@ begin
             id bigint primary key,
             external_id bigint not null unique,
             name text,
-            factor smallint,
-            date_add timestamp default now()
+            convert_factor smallint,
+            created_at timestamp default now()
         );
 
         create sequence seq_storage_operation_types start with 1;
@@ -143,7 +143,7 @@ begin
             external_id bigint not null unique,
             name text,
             preview_group text,
-            date_add timestamp default now()
+            created_at timestamp default now()
         );
 
         create sequence seq_transaction_types start with 1;
@@ -157,7 +157,7 @@ begin
             id bigint primary key,
             external_id bigint not null unique,
             name text,
-            date_add timestamp default now()
+            created_at timestamp default now()
         );
 
         create sequence seq_product_loss_reasons start with 1;
