@@ -1,0 +1,170 @@
+do $$
+begin
+    begin
+        create table if not exists products(
+            id bigint primary key,
+            external_id bigint not null unique,
+            name text,
+            flagging smallint,
+            created_at timestamp default now()
+        );
+
+		create sequence seq_products start with 1;
+        alter table products
+            alter column id set default nextval('seq_products');
+    end;
+
+    begin 
+        create table if not exists categories(
+            id bigint primary key,
+            external_id bigint not null unique,
+            name text,
+            parent_id bigint,
+            created_at timestamp default now()
+        );
+
+        create sequence seq_categories start with 1;
+        alter table categories
+            alter column id set default nextval('seq_categories');
+    end;
+
+    begin
+        create table if not exists units(
+            id bigint primary key,
+            external_id bigint not null unique,
+            name text,
+            conversion_factor float,
+            created_at timestamp default now()
+        );
+
+        create sequence seq_units start with 1;
+        alter table units
+            alter column id set default nextval('seq_units');
+    end;
+
+    begin
+        create table if not exists base_units(
+            id bigint primary key,
+            external_id bigint not null unique,
+            short_name text not null,
+            full_name text not null,
+            created_at timestamp default now()
+        );
+
+        create sequence seq_base_units start with 1;
+        alter table base_units
+            alter column id set default nextval('seq_base_units');
+    end;
+
+    begin
+        create table if not exists vendors(
+            id bigint primary key,
+            external_id bigint not null unique,
+            name text,
+            parent_id bigint,
+            parent_name text,
+            created_at timestamp default now()
+        );
+
+        create sequence seq_vendors start with 1;
+        alter table vendors
+            alter column id set default nextval('seq_vendors');
+    end;
+
+    begin
+        create table if not exists storages(
+            id bigint primary key,
+            external_id bigint not null unique,
+            name text,
+            created_at timestamp default now()
+        );
+
+        create sequence seq_storages start with 1;
+        alter table storages
+            alter column id set default nextval('seq_storages');
+    end;
+
+    begin
+        -- филиалы компании 
+        create table if not exists departments(
+            id bigint primary key,
+            external_id bigint not null unique,
+            short_name text,
+            full_name text,
+            created_at timestamp default now()
+        );
+
+        create sequence seq_departments start with 1;
+        alter table departments
+            alter column id set default nextval('seq_departments');
+    end;
+
+    -- с точки зрения безопасности должен храниться не сам пароль сотрудника, а хеш пароля...
+    begin
+        create table staff
+        (
+            id bigint primary key,
+            external_id bigint not null unique,
+            last_name text,
+            first_name text,
+            middle_name text,
+            created_at timestamp default now()
+        );
+
+        create sequence seq_staff start with 1;
+        alter table staff
+            alter column id set default nextval('seq_staff');
+    end;
+
+    begin
+        create table storage_operation_types
+        (
+            id bigint primary key,
+            external_id bigint not null unique,
+            name text,
+            factor int,
+            created_at timestamp default now()
+        );
+
+        create sequence seq_storage_operation_types start with 1;
+        alter table storage_operation_types
+            alter column id set default nextval('seq_storage_operation_types');
+    end;
+
+    -- в будущем можно сделать foreign key этой таблицы с продуктами, поставщиками и тд.
+    -- я не знаю, нужны ли foreign key сейчас
+    begin
+        create table storage_operations
+        (
+            id bigint primary key,
+            external_id bigint not null unique,
+            product_id bigint,
+            vendor_id bigint,
+            storage_id bigint, 
+            unit_id bigint,
+            operation_type_id bigint,
+            price numeric(20, 10),
+            amount numeric(20, 10),
+            created_at timestamp default now()
+        );
+
+        create sequence seq_storage_operations start with 1;
+        alter table storage_operations
+            alter column id set default nextval('seq_storage_operations');
+    end;
+
+    begin
+        create table product_loss_reasons
+        (
+            id bigint primary key,
+            external_id bigint not null unique,
+            name text,
+            created_at timestamp default now()
+        );
+
+        create sequence seq_product_loss_reasons start with 1;
+        alter table product_loss_reasons
+            alter column id set default nextval('seq_product_loss_reasons');
+    end;
+end $$;
+
