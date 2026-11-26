@@ -1,10 +1,6 @@
 do $$
 begin
     begin
-        create database front;
-    end:
-
-    begin
         create table if not exists products(
             id bigint primary key,
             external_id bigint not null unique,
@@ -47,6 +43,20 @@ begin
     end;
 
     begin
+        create table if not exists base_units(
+            id bigint primary key,
+            external_id bigint not null unique,
+            short_name text not null,
+            full_name text not null,
+            created_at timestamp default now()
+        );
+
+        create sequence seq_base_units start with 1;
+        alter table base_units
+            alter column id set default nextval('seq_base_units');
+    end;
+
+    begin
         create table if not exists vendors(
             id bigint primary key,
             external_id bigint not null unique,
@@ -63,7 +73,7 @@ begin
 
     begin
         create table if not exists storages(
-            id bigint primary key default nextval('seq_dim_storages'),
+            id bigint primary key,
             external_id bigint not null unique,
             name text,
             created_at timestamp default now()
@@ -81,9 +91,6 @@ begin
             external_id bigint not null unique,
             short_name text,
             full_name text,
-            inn_state_id varchar(12),
-            kpp_state_id char(9),
-            ogrn_state_id char(13),
             created_at timestamp default now()
         );
 
@@ -101,7 +108,6 @@ begin
             last_name text,
             first_name text,
             middle_name text,
-            password text,
             created_at timestamp default now()
         );
 

@@ -44,6 +44,15 @@ select 'insert into units(external_id, name, conversion_factor) values ('
 from dbo.size
 order by ID;
 
+select 'insert into base_units(external_id, short_name, full_name) values ('
+    + cast(t2.ID as varchar(max)) + ', '
+    + case when t2.ShortName is null then 'null' else '''' + t2.ShortName + '''' end + ', '
+    + case when t2.Description is null then 'null' else '''' + t2.Description + '''' end + ');'
+from dbo.size t1
+inner join dbo.bm_classifierSizes t2 on t1.BaseSizeID = t2.ID
+group by t2.ID, t2.ShortName, t2.Description
+order by t2.ID;
+
 
 
 -- аналогично для поставщиков
@@ -71,10 +80,7 @@ order by id;
 select 'insert into departments(external_id, short_name, full_name, inn_state_id, kpp_state_id, ogrn_state_id) values ('
     + cast(ID as varchar(max)) + ', '
     + case when ShortName is null then 'null' else '''' + ShortName + '''' end + ', '
-    + case when CompanyName is null then 'null' else '''' + CompanyName + '''' end + ', '
-    + case when INN is null then 'null' else '''' + INN + '''' end + ', '
-    + case when KPP is null or KPP = '' then 'null' else '''' + KPP + '''' end + ', '
-    + case when OGRN is null then 'null' else '''' + OGRN + '''' end + ');'
+    + case when CompanyName is null then 'null' else '''' + CompanyName + '''' end + ');'
 from dbo.bm_Companies
 order by ID;
 
@@ -85,8 +91,7 @@ select 'insert into staff(external_id, last_name, first_name, middle_name) value
     + cast(personid as varchar(max)) + ', '
     + case when nullif(lastname, '') is null then 'null' else '''' + lastname + '''' end + ', '
     + case when nullif(firstname, '') is null then 'null' else '''' + firstname + '''' end + ', '
-    + case when nullif(middlename, '') is null then 'null' else '''' + middlename + '''' end + ', '
-    + case when nullif(password, '') is null then 'null' else '''' + password + '''' end + ');'
+    + case when nullif(middlename, '') is null then 'null' else '''' + middlename + '''' end + ');'
 from dbo.personnel
 order by personid;
 
